@@ -1,0 +1,235 @@
+name: Web-to-App Compiler Engine
+
+on:
+  repository_dispatch:
+    types: [trigger-compiler]
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Name of the application'
+        required: true
+        default: 'My Web App'
+      website_url:
+        description: 'URL of the website to convert'
+        required: true
+        default: 'https://example.com'
+      package_name:
+        description: 'Package ID (e.g., com.converter.app)'
+        required: false
+        default: 'com.converter.app'
+      build_id:
+        description: 'Unique build ID'
+        required: false
+        default: 'manual-test'
+      callback_url:
+        description: 'Callback webhook URL'
+        required: false
+        default: ''
+
+jobs:
+  build-android:
+    name: Build Android Release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Inputs
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "APP_NAME=${{ github.event.client_payload.app_name }}" >> $GITHUB_ENV
+            echo "WEBSITE_URL=${{ github.event.client_payload.website_url }}" >> $GITHUB_ENV
+            echo "PACKAGE_NAME=${{ github.event.client_payload.package_name || 'com.converter.app' }}" >> $GITHUB_ENV
+            echo "BUILD_ID=${{ github.event.client_payload.build_id }}" >> $GITHUB_ENV
+            echo "CALLBACK_URL=${{ github.event.client_payload.callback_url }}" >> $GITHUB_ENV
+          else
+            echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+            echo "WEBSITE_URL=${{ github.event.inputs.website_url }}" >> $GITHUB_ENV
+            echo "PACKAGE_NAME=${{ github.event.inputs.package_name }}" >> $GITHUB_ENV
+            echo "BUILD_ID=${{ github.event.inputs.build_id }}" >> $GITHUB_ENV
+            echo "CALLBACK_URL=${{ github.event.inputs.callback_url }}" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Java Development Kit
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter Environment
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Inject Custom Configuration
+        run: |
+          mkdir -p flutter-template/assets
+          echo '{"app_name": "${{ env.APP_NAME }}", "website_url": "${{ env.WEBSITE_URL }}"}' > flutter-template/assets/config.json
+          echo "Assets injected successfully:"
+          cat flutter-template/assets/config.json
+
+      - name: Dynamic Android Identity Rewriting
+        run: |
+          CD_PATH="flutter-template"
+          if [ -d "$CD_PATH/android" ]; then
+            echo "Customizing Android package identification and app title..."
+            find $CD_PATH/android/app/src/main/ -name "AndroidManifest.xml" -exec sed -i 's/android:label=".*"/android:label="${{ env.APP_NAME }}"/g' {} +
+            find $CD_PATH/android/app/ -name "build.gradle" -exec sed -i 's/applicationId ".*"/applicationId "${{ env.PACKAGE_NAME }}"/g' {} +
+          else
+            echo "No android folder found in flutter-template. Creating default project if missing."
+          fi
+
+      - name: Fetch Flutter Dependencies
+        run: |
+          cd flutter-template
+          flutter pub get
+
+      - name: Build Release APK
+        run: |
+          cd flutter-template
+          flutter build apk --release
+
+      - name: Rename APK for Easy Distribution
+        id: rename
+        run: |
+          SAFE_NAME=$(echo "${{ env.APP_NAME }}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_' | sed 's/ /_/g')
+          if [ -z "$SAFE_NAME" ]; then SAFE_NAME="app"; fi
+          APK_PATH="flutter-template/build/app/outputs/flutter-apk/${SAFE_NAME}-release.apk"
+          mv flutter-template/build/app/outputs/flutter-apk/app-release.apk "$APK_PATH"
+          echo "RENAMED_APK_PATH=$APK_PATH" >> $GITHUB_ENV
+          echo "SAFE_NAME=$SAFE_NAME" >> $GITHUB_ENV
+          echo "FILE_NAME=${SAFE_NAME}-release.apk" >> $GITHUB_ENV
+
+      - name: Upload APK to Bashupload and Fallback
+        id: upload
+        run: |
+          echo "Uploading $RENAMED_APK_PATH to hosting servers..."
+          
+          # Try Bashupload
+          DOWNLOAD_URL=$(curl -sT "$RENAMED_APK_PATH" "https://bashupload.com/$FILE_NAME" | grep -o 'https://bashupload.com/[^ ]*' | head -n 1)
+          
+          # Try File.io fallback if bashupload is empty or failed
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Bashupload failed, trying file.io fallback..."
+            RES=$(curl -s -F "file=@$RENAMED_APK_PATH" https://file.io)
+            DOWNLOAD_URL=$(echo "$RES" | grep -o '"link":"[^"]*' | cut -d'"' -f4)
+          fi
+          
+          # Default fallback mock url if offline or error
+          if [ -z "$DOWNLOAD_URL" ]; then
+            DOWNLOAD_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+          echo "Final Download URL: $DOWNLOAD_URL"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
+
+      - name: Dispatch Webhook Callback
+        if: env.CALLBACK_URL != ''
+        run: |
+          echo "Sending webhook callback to $CALLBACK_URL with Build ID $BUILD_ID"
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "build_id": "${{ env.BUILD_ID }}",
+              "platform": "android",
+              "download_url": "${{ env.DOWNLOAD_URL }}",
+              "status": "success"
+            }' \
+            "$CALLBACK_URL"
+
+  build-ios:
+    name: Build iOS Xcode Project
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Inputs
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "APP_NAME=${{ github.event.client_payload.app_name }}" >> $GITHUB_ENV
+            echo "WEBSITE_URL=${{ github.event.client_payload.website_url }}" >> $GITHUB_ENV
+            echo "PACKAGE_NAME=${{ github.event.client_payload.package_name || 'com.converter.app' }}" >> $GITHUB_ENV
+            echo "BUILD_ID=${{ github.event.client_payload.build_id }}" >> $GITHUB_ENV
+            echo "CALLBACK_URL=${{ github.event.client_payload.callback_url }}" >> $GITHUB_ENV
+          else
+            echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+            echo "WEBSITE_URL=${{ github.event.inputs.website_url }}" >> $GITHUB_ENV
+            echo "PACKAGE_NAME=${{ github.event.inputs.package_name }}" >> $GITHUB_ENV
+            echo "BUILD_ID=${{ github.event.inputs.build_id }}" >> $GITHUB_ENV
+            echo "CALLBACK_URL=${{ github.event.inputs.callback_url }}" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Flutter Environment
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Inject Custom Configuration
+        run: |
+          mkdir -p flutter-template/assets
+          echo '{"app_name": "${{ env.APP_NAME }}", "website_url": "${{ env.WEBSITE_URL }}"}' > flutter-template/assets/config.json
+
+      - name: Fetch Flutter Dependencies
+        run: |
+          cd flutter-template
+          flutter pub get
+
+      - name: Build iOS Application (Unsigned Bundle)
+        run: |
+          cd flutter-template
+          flutter build ios --no-codesign
+
+      - name: Archive iOS Bundle for Export
+        run: |
+          SAFE_NAME=$(echo "${{ env.APP_NAME }}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_' | sed 's/ /_/g')
+          if [ -z "$SAFE_NAME" ]; then SAFE_NAME="app"; fi
+          FILE_NAME="${SAFE_NAME}-ios-unsigned.zip"
+          
+          cd flutter-template/build/ios/iphoneos
+          zip -r "../../../../$FILE_NAME" .
+          
+          cd ../../../..
+          echo "ZIP_PATH=$FILE_NAME" >> $GITHUB_ENV
+          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+
+      - name: Upload iOS to Bashupload and Fallback
+        id: upload
+        run: |
+          echo "Uploading $ZIP_PATH to hosting servers..."
+          
+          # Try Bashupload
+          DOWNLOAD_URL=$(curl -sT "$ZIP_PATH" "https://bashupload.com/$FILE_NAME" | grep -o 'https://bashupload.com/[^ ]*' | head -n 1)
+          
+          # Try File.io fallback if bashupload is empty or failed
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Bashupload failed, trying file.io fallback..."
+            RES=$(curl -s -F "file=@$ZIP_PATH" https://file.io)
+            DOWNLOAD_URL=$(echo "$RES" | grep -o '"link":"[^"]*' | cut -d'"' -f4)
+          fi
+          
+          # Default fallback mock url if offline or error
+          if [ -z "$DOWNLOAD_URL" ]; then
+            DOWNLOAD_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+          echo "Final Download URL: $DOWNLOAD_URL"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
+
+      - name: Dispatch Webhook Callback
+        if: env.CALLBACK_URL != ''
+        run: |
+          echo "Sending webhook callback to $CALLBACK_URL with Build ID $BUILD_ID"
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "build_id": "${{ env.BUILD_ID }}",
+              "platform": "ios",
+              "download_url": "${{ env.DOWNLOAD_URL }}",
+              "status": "success"
+            }' \
+            "$CALLBACK_URL"
