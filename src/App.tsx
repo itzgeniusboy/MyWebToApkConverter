@@ -596,7 +596,7 @@ export default function App() {
                 <span>Compiler Configuration</span>
               </h2>
 
-              <form onSubmit={triggerCompilation} className="space-y-5">
+              <form onSubmit={triggerCompilation} className="space-y-5" noValidate>
                 
                 {/* Website URL Input */}
                 <div className="space-y-2">
@@ -837,7 +837,7 @@ export default function App() {
                       <div className="flex-1 bg-slate-950 flex items-center justify-center overflow-hidden">
                         {websiteUrl && websiteUrl.startsWith("http") ? (
                           <iframe
-                            src={websiteUrl}
+                            src={`/api/proxy?url=${encodeURIComponent(websiteUrl)}`}
                             className="w-full h-full border-none"
                             title="Interactive Container Preview"
                             referrerPolicy="no-referrer"

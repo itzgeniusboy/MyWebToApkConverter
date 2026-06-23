@@ -84,6 +84,66 @@ async function startServer() {
   // Middleware for body parsing
   app.use(express.json());
 
+  /**
+   * High-Fidelity Bypassing Proxy for Website Preview
+   * Allows reliable iframe nesting of Vercel, Netlify, and other web apps
+   * by stripping X-Frame-Options/CSP and injecting native HTML <base href="...">
+   */
+  app.get("/api/proxy", async (req: express.Request, res: express.Response) => {
+    try {
+      const targetUrl = req.query.url;
+      if (!targetUrl || typeof targetUrl !== "string") {
+        return res.status(400).send("Missing target url parameter");
+      }
+
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(targetUrl);
+      } catch (err) {
+        return res.status(400).send("Invalid URL format");
+      }
+
+      const response = await fetch(parsedUrl.toString(), {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+        }
+      });
+
+      if (!response.ok) {
+        return res.status(response.status).send(`Failed to fetch target website. Status: ${response.status}`);
+      }
+
+      let contentType = response.headers.get("content-type") || "text/html";
+      res.setHeader("Content-Type", contentType);
+
+      if (contentType.includes("text/html")) {
+        let html = await response.text();
+        const base = `${parsedUrl.protocol}//${parsedUrl.host}${parsedUrl.pathname}`;
+        
+        // Inject native HTML <base> tag to auto-resolve all relative links/styles/scripts in the browser
+        const baseTag = `<base href="${base}">`;
+        if (html.includes("<head>")) {
+          html = html.replace("<head>", `<head>${baseTag}`);
+        } else if (html.includes("<HEAD>")) {
+          html = html.replace("<HEAD>", `<HEAD>${baseTag}`);
+        } else {
+          html = baseTag + html;
+        }
+
+        // Remove any CSP meta tag to prevent script execution blockages inside development sandboxes
+        html = html.replace(/<meta[^>]*http-equiv=["']Content-Security-Policy["'][^>]*>/gi, "");
+        
+        res.send(html);
+      } else {
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+      }
+    } catch (error: any) {
+      console.error("[PROXY ERROR]", error);
+      res.status(500).send(`Proxy exception: ${error.message || error}`);
+    }
+  });
+
   // API Endpoints: Mount BEFORE Vite middleware to avoid being intercepted
 
   /**
