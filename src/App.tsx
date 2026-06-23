@@ -93,6 +93,9 @@ export default function App() {
 
   // Load and sync local archives
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location && window.location.origin) {
+      setWebsiteUrl(window.location.origin);
+    }
     const cached = localStorage.getItem("nexus_apk_archives_v2");
     if (cached) {
       try {
@@ -246,7 +249,13 @@ export default function App() {
   const triggerCompilation = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!websiteUrl || !websiteUrl.startsWith("http")) {
+    let finalUrl = websiteUrl.trim();
+    if (finalUrl && !/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = `https://${finalUrl}`;
+      setWebsiteUrl(finalUrl);
+    }
+
+    if (!finalUrl || !finalUrl.startsWith("http")) {
       toast.error("Please enter a valid website URL starting with http:// or https://");
       return;
     }
@@ -262,7 +271,7 @@ export default function App() {
     setIosDownloadUrl(null);
     setConsoleLogs([
       `[NEXUS SYSTEM] Initializing compiler payload...`,
-      `[CONFIG] Package Target URL: ${websiteUrl}`,
+      `[CONFIG] Package Target URL: ${finalUrl}`,
       `[CONFIG] Display Name: ${appName}`,
       `[CONFIG] Package ID: ${packageName}`,
       `[CONFIG] Device Orientation: ${orientation.toUpperCase()}`,
@@ -276,7 +285,7 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appName,
-          websiteUrl,
+          websiteUrl: finalUrl,
           packageName,
           githubRepo
         })
@@ -596,13 +605,16 @@ export default function App() {
                     <span>Target Website URL</span>
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     required
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://your-responsive-app.com"
+                    placeholder="your-app.vercel.app or https://your-responsive-app.com"
                     className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500 transition duration-300"
                   />
+                  <span className="text-[10px] text-slate-500 font-mono mt-1 block">
+                    Supports Vercel, Netlify, custom domains, etc. (auto-adds https:// protocol prefix)
+                  </span>
                 </div>
 
                 {/* Grid for App Name and Package ID */}
