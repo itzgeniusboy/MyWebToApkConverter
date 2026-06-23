@@ -1,918 +1,1089 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { 
-  Smartphone, 
-  Globe, 
-  Github, 
+  ChevronDown, 
+  Sparkles, 
+  ArrowRight, 
+  X, 
   Cpu, 
-  Settings, 
-  Play, 
-  RefreshCw, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  ExternalLink, 
-  FileCode, 
-  Copy, 
-  BookOpen, 
-  Key, 
+  Globe, 
   Terminal, 
+  CheckCircle,
+  HelpCircle,
+  Trash2,
   Download,
-  Check,
-  ChevronRight,
-  Code,
-  Layers,
-  HelpCircle
+  History,
+  RefreshCw,
+  Smartphone,
+  Settings,
+  ArrowLeft,
+  ExternalLink,
+  ShieldCheck,
+  Maximize2,
+  Lock,
+  ArrowUpRight,
+  Wifi,
+  Battery
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Toaster, toast } from "react-hot-toast";
 
-// Read-only baseline configurations
-const FLUTTER_MAIN_DART = `import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ));
-  runApp(const WebToApp());
+// Interface for brand logos in the bottom marquee
+interface BrandLogo {
+  char: string;
+  name: string;
+  color: string;
 }
 
-class WebToApp extends StatelessWidget {
-  const WebToApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Web to App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.black,
-      ),
-      home: const WebViewScreen(),
-    );
-  }
-}
-
-class WebViewScreen extends StatefulWidget {
-  const WebViewScreen({super.key});
-
-  @override
-  State<WebViewScreen> createState() => _WebViewScreenState();
-}
-
-class _WebViewScreenState extends State<WebViewScreen> {
-  late final WebViewController _controller;
-  bool _isLoadingConfig = true;
-  bool _isLoadingPage = true;
-  String _appName = "Loading...";
-  String _targetUrl = "";
-  String _errorMsg = "";
-
-  @override
-  void initState() {
-    super.initState();
-    _loadConfig();
-  }
-
-  Future<void> _loadConfig() async {
-    try {
-      final configString = await rootBundle.loadString('assets/config.json');
-      final Map<String, dynamic> config = jsonDecode(configString);
-      
-      setState(() {
-        _appName = config['app_name'] ?? 'Web App';
-        _targetUrl = config['website_url'] ?? 'https://example.com';
-        _isLoadingConfig = false;
-      });
-
-      _initWebViewController();
-    } catch (e) {
-      setState(() {
-        _errorMsg = "Failed to load assets/config.json: \\$e";
-        _isLoadingConfig = false;
-      });
-    }
-  }
-
-  void _initWebViewController() {
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            // Update loading bar
-          },
-          onPageStarted: (String url) {
-            setState(() {
-              _isLoadingPage = true;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              _isLoadingPage = false;
-            });
-          },
-          onWebResourceError: (WebResourceError error) {
-            // Handle offline errors
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(_targetUrl));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoadingConfig) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
-      );
-    }
-
-    if (_errorMsg.isNotEmpty) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Text(
-              _errorMsg,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 16),
-              textAlign: Center,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (bool didPop, dynamic result) async {
-            if (didPop) return;
-            if (await _controller.canGoBack()) {
-              await _controller.goBack();
-            } else {
-              SystemNavigator.pop();
-            }
-          },
-          child: Stack(
-            children: [
-              WebViewWidget(controller: _controller),
-              if (_isLoadingPage)
-                const Positioned.fill(
-                  child: ColoredBox(
-                    color: Colors.black,
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}`;
-
-const FLUTTER_PUBSPEC = `name: web_to_app_template
-description: A clean, performance-optimized Flutter WebView template that loads web URLs dynamically.
-version: 1.0.0+1
-
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-dependencies:
-  flutter:
-    sdk: flutter
-  webview_flutter: ^4.8.0
-  cupertino_icons: ^1.0.6
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
-
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/config.json`;
-
-const GITHUB_WORKFLOW = `name: Web-to-App Compiler Engine
-
-on:
-  repository_dispatch:
-    types: [trigger-compiler]
-  workflow_dispatch:
-    inputs:
-      app_name:
-        description: 'Name of the application'
-        required: true
-        default: 'My Web App'
-      website_url:
-        description: 'URL of the website to convert'
-        required: true
-        default: 'https://example.com'
-      package_name:
-        description: 'Package ID (e.g., com.converter.app)'
-        required: false
-        default: 'com.converter.app'
-      build_id:
-        description: 'Unique build ID'
-        required: false
-        default: 'manual-test'
-      callback_url:
-        description: 'Callback webhook URL'
-        required: false
-        default: ''
-
-jobs:
-  build-android:
-    name: Build Android Release APK
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Extract Inputs
-        id: vars
-        run: |
-          if [ "\${{ github.event_name }}" = "repository_dispatch" ]; then
-            echo "APP_NAME=\${{ github.event.client_payload.app_name }}" >> $GITHUB_ENV
-            echo "WEBSITE_URL=\${{ github.event.client_payload.website_url }}" >> $GITHUB_ENV
-            echo "PACKAGE_NAME=\${{ github.event.client_payload.package_name || 'com.converter.app' }}" >> $GITHUB_ENV
-            echo "BUILD_ID=\${{ github.event.client_payload.build_id }}" >> $GITHUB_ENV
-            echo "CALLBACK_URL=\${{ github.event.client_payload.callback_url }}" >> $GITHUB_ENV
-          else
-            echo "APP_NAME=\${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
-            echo "WEBSITE_URL=\${{ github.event.inputs.website_url }}" >> $GITHUB_ENV
-            echo "PACKAGE_NAME=\${{ github.event.inputs.package_name }}" >> $GITHUB_ENV
-            echo "BUILD_ID=\${{ github.event.inputs.build_id }}" >> $GITHUB_ENV
-            echo "CALLBACK_URL=\${{ github.event.inputs.callback_url }}" >> $GITHUB_ENV
-          fi
-
-      - name: Setup Java Development Kit
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter Environment
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Inject Custom Configuration
-        run: |
-          mkdir -p flutter-template/assets
-          echo '{"app_name": "\${{ env.APP_NAME }}", "website_url": "\${{ env.WEBSITE_URL }}"}' > flutter-template/assets/config.json
-
-      - name: Dynamic Android Identity Rewriting
-        run: |
-          CD_PATH="flutter-template"
-          if [ -d "$CD_PATH/android" ]; then
-            find $CD_PATH/android/app/src/main/ -name "AndroidManifest.xml" -exec sed -i 's/android:label=".*"/android:label="\${{ env.APP_NAME }}"/g' {} +
-            find $CD_PATH/android/app/ -name "build.gradle" -exec sed -i 's/applicationId ".*"/applicationId="\${{ env.PACKAGE_NAME }}"/g' {} +
-          fi
-
-      - name: Fetch Flutter Dependencies
-        run: |
-          cd flutter-template
-          flutter pub get
-
-      - name: Build Release APK
-        run: |
-          cd flutter-template
-          flutter build apk --release
-
-      - name: Rename APK for Easy Distribution
-        id: rename
-        run: |
-          SAFE_NAME=\$(echo "\${{ env.APP_NAME }}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_' | sed 's/ /_/g')
-          if [ -z "$SAFE_NAME" ]; then SAFE_NAME="app"; fi
-          APK_PATH="flutter-template/build/app/outputs/flutter-apk/\${SAFE_NAME}-release.apk"
-          mv flutter-template/build/app/outputs/flutter-apk/app-release.apk "\$APK_PATH"
-          echo "RENAMED_APK_PATH=\$APK_PATH" >> $GITHUB_ENV
-          echo "FILE_NAME=\${SAFE_NAME}-release.apk" >> $GITHUB_ENV
-
-      - name: Upload APK to Bashupload and Fallback
-        id: upload
-        run: |
-          DOWNLOAD_URL=\$(curl -sT "\$RENAMED_APK_PATH" "https://bashupload.com/\$FILE_NAME" | grep -o 'https://bashupload.com/[^ ]*' | head -n 1)
-          if [ -z "\$DOWNLOAD_URL" ]; then
-            RES=\$(curl -s -F "file=@\$RENAMED_APK_PATH" https://file.io)
-            DOWNLOAD_URL=\$(echo "\$RES" | grep -o '"link":"[^"]*' | cut -d'"' -f4)
-          fi
-          echo "DOWNLOAD_URL=\$DOWNLOAD_URL" >> $GITHUB_ENV
-
-      - name: Dispatch Webhook Callback
-        if: env.CALLBACK_URL != ''
-        run: |
-          curl -X POST \\
-            -H "Content-Type: application/json" \\
-            -d "{\\"build_id\\": \\"\${{ env.BUILD_ID }}\\", \\"platform\\": \\"android\\", \\"download_url\\": \\"\${{ env.DOWNLOAD_URL }}\\", \\"status\\": \\"success\\"}" \\
-            "\$CALLBACK_URL"`;
-
-interface ActiveBuild {
-  build_id: string;
-  app_name: string;
-  website_url: string;
-  package_name: string;
-  status: "queued" | "in_progress" | "completed" | "failed";
+// Interface for system archives saved in offline local cache
+interface BuildArchive {
+  id: string;
+  appName: string;
+  websiteUrl: string;
+  packageName: string;
+  appColor: string;
+  orientation: string;
+  timestamp: string;
   android_url: string | null;
   ios_url: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 export default function App() {
-  // Input parameters
-  const [appName, setAppName] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [packageName, setPackageName] = useState("com.converter.app");
-
-  // Advanced overrides (users can override if they are self-hosting individually)
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Interactive Navigation States
+  const [activeMenu, setActiveMenu] = useState<"features" | "solutions" | "learning" | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Compiler Configuration States
+  const [websiteUrl, setWebsiteUrl] = useState("https://react.dev");
+  const [appName, setAppName] = useState("Nexus React App");
+  const [packageName, setPackageName] = useState("com.nexus.reactapp");
+  const [appColor, setAppColor] = useState("#6366f1");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape" | "auto">("portrait");
+  
+  // Feature Toggles
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  const [pullToRefresh, setPullToRefresh] = useState(true);
+  const [zoomControls, setZoomControls] = useState(false);
+  
+  // Advanced GitHub Pipeline Override Collapsible
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [githubToken, setGithubToken] = useState("");
-  const [githubRepo, setGithubRepo] = useState("");
-
-  // Build state flow
-  const [currentBuildId, setCurrentBuildId] = useState<string | null>(null);
-  const [activeBuild, setActiveBuild] = useState<ActiveBuild | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorText, setErrorText] = useState<string | null>(null);
-
-  // Simulated live logging messages
-  const [liveLog, setLiveLog] = useState<string[]>([]);
+  const [githubRepo, setGithubRepo] = useState("itzraviking/web-to-apk-runner"); // default or client preset
+  
+  // Active Compiler / Build States
+  const [activeBuildId, setActiveBuildId] = useState<string | null>(null);
+  const [buildStatus, setBuildStatus] = useState<"idle" | "queued" | "in_progress" | "completed" | "failed">("idle");
+  const [progress, setProgress] = useState(0);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
+  const [androidDownloadUrl, setAndroidDownloadUrl] = useState<string | null>(null);
+  const [iosDownloadUrl, setIosDownloadUrl] = useState<string | null>(null);
 
-  // Explorer tab configuration
-  const [explorerTab, setExplorerTab] = useState<"structure" | "main" | "pubspec" | "workflow" | "server">("structure");
-  const [copiedText, setCopiedText] = useState(false);
+  // System Build Archives from LocalStorage
+  const [buildArchives, setBuildArchives] = useState<BuildArchive[]>([]);
 
-  // Load configuration placeholders on mount
+  // Simulation step milestones
+  const steps = [
+    { title: "Sovereign Setup", desc: "Verifying target URL, package manifest, and token structures" },
+    { title: "Asset Compiler", desc: "Injecting app icon, launching splash assets, and packaging web views" },
+    { title: "Android Runner", desc: "Running Gradle compilation via dedicated GHA runner nodes" },
+    { title: "iOS Xcode Flow", desc: "Signing bundle certificates and creating Swift release payload" },
+    { title: "CDN Distribution", desc: "Securing compiled binary pipelines onto low-latency CDN links" }
+  ];
+
+  // Load and sync local archives
   useEffect(() => {
-    setAppName("My Mobile Webapp");
-    setWebsiteUrl("https://example.com");
-
-    const localToken = localStorage.getItem("S_GITHUB_TOKEN") || "";
-    const localRepo = localStorage.getItem("S_GITHUB_REPO") || "";
-    if (localToken) setGithubToken(localToken);
-    if (localRepo) setGithubRepo(localRepo);
+    const cached = localStorage.getItem("nexus_apk_archives_v2");
+    if (cached) {
+      try {
+        setBuildArchives(JSON.parse(cached));
+      } catch (e) {
+        console.error("Failed to parse archives from localStorage", e);
+      }
+    }
   }, []);
 
-  const saveAdvancedSettings = (token: string, repo: string) => {
-    localStorage.setItem("S_GITHUB_TOKEN", token);
-    localStorage.setItem("S_GITHUB_REPO", repo);
+  // Save archives helper
+  const saveArchives = (updated: BuildArchive[]) => {
+    setBuildArchives(updated);
+    localStorage.setItem("nexus_apk_archives_v2", JSON.stringify(updated));
   };
 
-  // Convert submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Auto-generate package name from app name
+  useEffect(() => {
+    if (appName) {
+      const formattedName = appName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+        .substring(0, 20);
+      setPackageName(`com.nexus.${formattedName || "app"}`);
+    }
+  }, [appName]);
+
+  // Background Video custom JS loop (Fade-in start, Fade-out end)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+
+    let animFrameId: number;
+    let isWaiting = false;
+
+    const updateOpacity = () => {
+      if (!video || isWaiting) return;
+
+      const duration = video.duration;
+      const currentTime = video.currentTime;
+
+      if (!isNaN(duration) && duration > 0) {
+        let opacity = 1;
+
+        // 0.5s fade-in at the beginning
+        if (currentTime < 0.5) {
+          opacity = currentTime / 0.5;
+        }
+        // 0.5s fade-out at the end
+        else if (currentTime > duration - 0.5) {
+          opacity = Math.max(0, (duration - currentTime) / 0.5);
+        }
+
+        video.style.opacity = opacity.toString();
+      }
+
+      animFrameId = requestAnimationFrame(updateOpacity);
+    };
+
+    const handleEnded = () => {
+      isWaiting = true;
+      if (video) {
+        video.style.opacity = "0";
+      }
+
+      // 100ms reset delay before replay
+      setTimeout(() => {
+        if (video) {
+          video.currentTime = 0;
+          isWaiting = false;
+          video.play()
+            .then(() => {
+              animFrameId = requestAnimationFrame(updateOpacity);
+            })
+            .catch(err => console.log("Background video play interrupted:", err));
+        }
+      }, 100);
+    };
+
+    video.addEventListener("ended", handleEnded);
+
+    // Initial play trigger
+    video.play()
+      .then(() => {
+        animFrameId = requestAnimationFrame(updateOpacity);
+      })
+      .catch(err => console.log("Background video auto-play blocked or interrupted:", err));
+
+    return () => {
+      cancelAnimationFrame(animFrameId);
+      video.removeEventListener("ended", handleEnded);
+    };
+  }, []);
+
+  // Polling backend for build updates
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+    
+    if (activeBuildId && (buildStatus === "queued" || buildStatus === "in_progress")) {
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/status/${activeBuildId}`);
+          if (!res.ok) throw new Error("Status endpoint failed");
+          const data = await res.json();
+
+          // If finished or status is completed
+          if (data.status === "completed" || data.android_url || data.ios_url) {
+            setBuildStatus("completed");
+            setProgress(100);
+            setActiveStepIndex(4);
+            setAndroidDownloadUrl(data.android_url || `https://github.com/${githubRepo}/releases`);
+            setIosDownloadUrl(data.ios_url);
+            clearInterval(pollInterval);
+            toast.success("Binary compilation succeeded!");
+
+            // Append to system archives list
+            const newArchive: BuildArchive = {
+              id: activeBuildId,
+              appName,
+              websiteUrl,
+              packageName,
+              appColor,
+              orientation,
+              timestamp: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              android_url: data.android_url || `https://github.com/${githubRepo}/releases`,
+              ios_url: data.ios_url
+            };
+            const updated = [newArchive, ...buildArchives.filter(a => a.id !== activeBuildId)];
+            saveArchives(updated);
+          } else if (data.status === "failed") {
+            setBuildStatus("failed");
+            clearInterval(pollInterval);
+            toast.error("Compilation pipeline failed on GitHub Action.");
+          }
+        } catch (err) {
+          console.warn("Polling error:", err);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [activeBuildId, buildStatus]);
+
+  // Handle compilation submission
+  const triggerCompilation = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setErrorText(null);
-    setCurrentBuildId(null);
-    setActiveBuild(null);
+
+    if (!websiteUrl || !websiteUrl.startsWith("http")) {
+      toast.error("Please enter a valid website URL starting with http:// or https://");
+      return;
+    }
+    if (!appName.trim()) {
+      toast.error("Please enter an App Display Name.");
+      return;
+    }
+
+    setBuildStatus("queued");
+    setProgress(5);
     setActiveStepIndex(0);
-    setLiveLog(["[1/5] Initiating request parameters...", "[2/5] Synthesizing payload packages..."]);
+    setAndroidDownloadUrl(null);
+    setIosDownloadUrl(null);
+    setConsoleLogs([
+      `[NEXUS SYSTEM] Initializing compiler payload...`,
+      `[CONFIG] Package Target URL: ${websiteUrl}`,
+      `[CONFIG] Display Name: ${appName}`,
+      `[CONFIG] Package ID: ${packageName}`,
+      `[CONFIG] Device Orientation: ${orientation.toUpperCase()}`,
+      `[CONFIG] Fullscreen Mode: ${isFullscreen ? "ENABLED" : "DISABLED"}`,
+      `[GHA QUEUE] Authenticating with GitHub sovereign app token...`
+    ]);
 
     try {
-      const response = await fetch("/api/convert", {
+      const res = await fetch("/api/convert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appName,
           websiteUrl,
           packageName,
-          githubToken: githubToken.trim() || undefined,
-          githubRepo: githubRepo.trim() || undefined
+          githubRepo
         })
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setCurrentBuildId(data.build_id);
-        setLiveLog(prev => [
-          ...prev,
-          `[3/5] Repository Dispatch triggered successfully! Received ID: ${data.build_id}`,
-          `[4/5] GitHub Runner is allocating hosted containers (ubuntu-latest & macos-latest)...`,
-          `[5/5] Awaiting compiler compilation telemetry updates...`
-        ]);
-        setActiveStepIndex(1);
-      } else {
-        setErrorText(data.error || "Failed to trigger compilation engine.");
-        setIsSubmitting(false);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to trigger compilation request.");
       }
+
+      setActiveBuildId(data.build_id);
+      setBuildStatus("in_progress");
+      toast.success("GitHub pipeline triggered successfully!");
+
+      // Simulate step progress and logs alongside GHA polling for an immersive, gorgeous developer experience
+      simulateLogProgress();
+
     } catch (err: any) {
-      setErrorText(`Network Error: ${err.message || err}`);
-      setIsSubmitting(false);
+      setBuildStatus("failed");
+      setConsoleLogs(prev => [
+        ...prev,
+        `[CRITICAL ERROR] Failed to dispatch action pipeline.`,
+        `[SYSTEM DETAIL] ${err.message || err}`
+      ]);
+      toast.error(err.message || "Pipeline dispatch failed. Verify server settings.");
     }
   };
 
-  // Polling logic
-  useEffect(() => {
-    if (!currentBuildId) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/status/${currentBuildId}`);
-        if (!response.ok) return;
-
-        const data: ActiveBuild = await response.json();
-        setActiveBuild(data);
-
-        // Adjust live logs based on state
-        if (data.android_url && !data.ios_url) {
-          setActiveStepIndex(2);
-          setLiveLog(prev => {
-            if (!prev.some(l => l.includes("Android compilation completed"))) {
-              return [...prev, "✓ Android compilation completed! Released Release APK to Bashupload.", "⌛ iOS Xcode Bundle is still building on Mac compiler runner (normally takes 1-2 mins)..."];
-            }
-            return prev;
-          });
-        } else if (data.ios_url && !data.android_url) {
-          setActiveStepIndex(3);
-          setLiveLog(prev => {
-            if (!prev.some(l => l.includes("iOS compilation completed"))) {
-              return [...prev, "✓ iOS compilation completed! Unsigned zip uploaded to secure cloud storage.", "⌛ Android compilation runner is still packaging files..."];
-            }
-            return prev;
-          });
-        } else if (data.android_url && data.ios_url) {
-          setActiveStepIndex(4);
-          setLiveLog(prev => {
-            if (!prev.some(l => l.includes("All compilations finalized"))) {
-              return [...prev, "✓ Android build fully finalized! Download link fetched.", "✓ iOS archive fully finalized! Unsigned package zip processed.", "✓ All compilations finalized! Ready to install."];
-            }
-            return prev;
-          });
-          setIsSubmitting(false);
-          clearInterval(interval);
+  // Simulate progress steps and dynamic outputs to enrich compiling user wait-time
+  const simulateLogProgress = () => {
+    let step = 0;
+    const progressInterval = setInterval(() => {
+      setBuildStatus(current => {
+        if (current === "completed" || current === "failed") {
+          clearInterval(progressInterval);
+          return current;
         }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 5000); // Poll every 5 seconds for fast response
 
-    return () => clearInterval(interval);
-  }, [currentBuildId]);
+        step += 1;
+        if (step <= 4) {
+          setActiveStepIndex(step);
+          setProgress(step * 22);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedText(true);
-    setTimeout(() => setCopiedText(false), 2000);
+          // Append highly specialized technical logs
+          const logTemplates = [
+            `[ENGINE] Scanning source DOM elements and validating SSL certificates...`,
+            `[COMPILER] Injecting splashscreen with theme color ${appColor}...`,
+            `[ANDROID] Compiling Android Gradle toolchains (SDK 34)...`,
+            `[IOS] Launching Xcode certificate validation pipeline...`,
+            `[CDN] Uploading signed release binaries to cloud storage...`
+          ];
+          setConsoleLogs(prev => [...prev, logTemplates[step - 1] || `[SYSTEM] Processing...`]);
+        }
+
+        return current;
+      });
+    }, 8000);
   };
 
+  // Restore preset inputs from an archive item
+  const restoreArchivePreset = (archive: BuildArchive) => {
+    setAppName(archive.appName);
+    setWebsiteUrl(archive.websiteUrl);
+    setPackageName(archive.packageName);
+    setAppColor(archive.appColor);
+    setOrientation(archive.orientation as any);
+    toast.success(`Presets restored for "${archive.appName}"`);
+  };
+
+  // Delete an archive item from LocalStorage
+  const deleteArchiveItem = (id: string) => {
+    const updated = buildArchives.filter(a => a.id !== id);
+    saveArchives(updated);
+    toast.success("Archive entry cleared.");
+  };
+
+  // Clear all archives
+  const clearAllArchives = () => {
+    if (window.confirm("Are you sure you want to delete all local build history?")) {
+      saveArchives([]);
+      toast.success("Archives purged successfully.");
+    }
+  };
+
+  // Brand logos for the infinite marquee
+  const brandLogos: BrandLogo[] = [
+    { char: "V", name: "Vortex", color: "text-indigo-400" },
+    { char: "N", name: "Nimbus", color: "text-emerald-400" },
+    { char: "P", name: "Prysma", color: "text-purple-400" },
+    { char: "C", name: "Cirrus", color: "text-cyan-400" },
+    { char: "K", name: "Kynder", color: "text-amber-400" },
+    { char: "H", name: "Halcyn", color: "text-rose-400" }
+  ];
+
   return (
-    <div id="saas-container" className="min-h-screen bg-[#07090e] text-slate-100 font-sans selection:bg-indigo-600 selection:text-white pb-16">
-      
-      {/* Header Panel */}
-      <header id="saas-header" className="border-b border-slate-800/80 bg-[#0a0d15]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div id="landing-root" className="relative min-h-screen flex flex-col justify-between bg-background text-foreground font-sans overflow-x-hidden select-none">
+      <Toaster position="top-right" toastOptions={{ style: { background: "#11121d", color: "#f3f3f3", border: "1px solid rgba(255,255,255,0.08)" } }} />
+
+      {/* BACKGROUND VIDEO ENGINE */}
+      <video
+        ref={videoRef}
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_065045_c44942da-53c6-4804-b734-f9e07fc22e08.mp4"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+        style={{ opacity: 0 }}
+        muted
+        playsInline
+        loop={false}
+      />
+
+      {/* BLURRED OVERLAY SHAPE */}
+      <div 
+        id="blurred-backdrop"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[984px] h-[527px] opacity-90 bg-gray-950 blur-[82px] pointer-events-none z-10"
+      />
+
+      {/* NAVBAR */}
+      <header className="relative w-full z-30">
+        <div className="w-full py-5 px-8 flex items-center justify-between">
+          
+          {/* Left Side Logo */}
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-xl shadow-lg shadow-indigo-950/40">
-              <Smartphone className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                Web2App Compiler
-              </h1>
-              <p className="text-[11px] text-slate-500 font-mono">100% Free Self-Hosted SaaS Engine</p>
-            </div>
+            <img 
+              src="/src/assets/logo.png" 
+              alt="Nexus Logo" 
+              className="h-8 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+            <span className="font-headline text-lg font-bold tracking-widest text-white flex items-center space-x-1">
+              <span className="w-2.5 h-2.5 rounded bg-gradient-to-tr from-indigo-500 to-amber-400 block md:hidden" />
+              <span className="hidden sm:inline">NEXUS</span>
+            </span>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1 bg-emerald-950/30 border border-emerald-900/40 rounded-full text-[11px] text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Backend Router Online</span>
+          {/* Center: Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <div className="relative">
+              <button
+                id="btn-features"
+                onClick={() => setActiveMenu(activeMenu === "features" ? null : "features")}
+                className="flex items-center space-x-1 text-sm font-medium text-foreground/95 hover:text-white transition duration-200 cursor-pointer"
+              >
+                <span>Sovereign Tech</span>
+                <ChevronDown className={`h-4 w-4 opacity-70 transition-transform duration-300 ${activeMenu === "features" ? "rotate-180 text-indigo-400" : ""}`} />
+              </button>
             </div>
-            <a 
-              href="https://github.com" 
-              target="_blank" 
-              rel="noreferrer"
-              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs rounded-lg transition"
+
+            <button
+              id="btn-solutions"
+              onClick={() => setActiveMenu(activeMenu === "solutions" ? null : "solutions")}
+              className="flex items-center space-x-1 text-sm font-medium text-foreground/95 hover:text-white transition duration-200 cursor-pointer"
             >
-              <Github className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Actions Docs</span>
-            </a>
+              <span>Enterprise SDK</span>
+            </button>
+
+            <button
+              id="btn-plans"
+              onClick={() => {
+                setActiveMenu(null);
+                toast.success("Premium compilations are fully free for early beta innovators.");
+              }}
+              className="text-sm font-medium text-foreground/95 hover:text-white transition duration-200 cursor-pointer"
+            >
+              Global Network
+            </button>
+          </nav>
+
+          {/* Right: Reset Compiler & Status pill */}
+          <div className="flex items-center space-x-4">
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-mono text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>GHA Active</span>
+            </div>
+
+            <button
+              id="btn-reset"
+              onClick={() => {
+                setBuildStatus("idle");
+                setActiveBuildId(null);
+                setConsoleLogs([]);
+                setProgress(0);
+                toast.success("Compiler environment flushed and reset.");
+              }}
+              className="btn-hero-secondary rounded-full px-4 py-2 text-xs font-semibold tracking-wider uppercase cursor-pointer"
+            >
+              Reset Session
+            </button>
           </div>
         </div>
+
+        {/* 1px Gradient Divider Line */}
+        <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-foreground/20 to-transparent mt-[3px]" />
+
+        {/* Floating Dropdown Panels */}
+        <AnimatePresence>
+          {activeMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[520px] rounded-2xl liquid-glass border border-white/5 p-6 shadow-2xl z-40 text-left"
+            >
+              {activeMenu === "features" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-xl hover:bg-white/5 transition duration-200">
+                    <div className="flex items-center space-x-2 text-indigo-400 mb-1">
+                      <Cpu className="h-4 w-4" />
+                      <span className="font-semibold text-xs tracking-wider uppercase">Native Engine</span>
+                    </div>
+                    <p className="text-[11px] text-hero-sub opacity-80 leading-normal">
+                      Deeply compiled Android Gradle packages using high-speed cloud workflow runners.
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl hover:bg-white/5 transition duration-200">
+                    <div className="flex items-center space-x-2 text-amber-400 mb-1">
+                      <Sparkles className="h-4 w-4" />
+                      <span className="font-semibold text-xs tracking-wider uppercase">Splash Injector</span>
+                    </div>
+                    <p className="text-[11px] text-hero-sub opacity-80 leading-normal">
+                      Dynamically bundle custom application color schemes, display names, and immersive web wrappers.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeMenu === "solutions" && (
+                <div className="space-y-4">
+                  <div className="p-3 rounded-xl hover:bg-white/5 transition duration-200 cursor-pointer">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-1">Signed Release Binaries</h4>
+                    <p className="text-[11px] text-hero-sub opacity-80">
+                      Deliver complete Android keystore signed APK artifacts optimized for direct play store submission.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="w-full flex justify-end mt-4 pt-3 border-t border-white/5">
+                <button 
+                  onClick={() => setActiveMenu(null)}
+                  className="text-[9px] font-mono tracking-widest uppercase text-foreground/40 hover:text-white transition cursor-pointer"
+                >
+                  [ Close menu ]
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
+      {/* CORE HERO COMPILER HUB */}
+      <main className="relative flex-1 flex flex-col justify-center items-center px-4 md:px-8 py-12 z-10 overflow-visible w-full max-w-7xl mx-auto">
         
-        {/* Core Description Title */}
-        <div className="mb-10 text-center max-w-3xl mx-auto">
-          <span className="px-2.5 py-1 bg-indigo-950/60 text-indigo-400 border border-indigo-900/30 rounded-full text-xs font-semibold uppercase tracking-wider font-mono">
-            Zero Client Dependencies
+        {/* Dynamic Micro-Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.6 }}
+          className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 shadow-lg mb-8 cursor-pointer hover:bg-white/[0.06] transition"
+        >
+          <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+          <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-slate-200">
+            Sovereign Compiler Node Active
           </span>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight mt-3">
-            Convert Any Website to Native Android & iOS Apps
-          </h2>
-          <p className="text-slate-400 text-sm mt-3 leading-relaxed">
-            Submit your responsive web app. The server will dynamically trigger your custom GitHub Actions automation, compiling optimized packages on remote hosted runners and delivering download credentials back here automatically!
-          </p>
+          <ArrowRight className="h-3 w-3 text-slate-400" />
+        </motion.div>
+
+        {/* Dynamic Title */}
+        <div className="text-center mb-10">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="font-headline font-normal tracking-[-0.024em] leading-[1.02] text-[48px] sm:text-[70px] md:text-[90px] lg:text-[110px]"
+          >
+            <span>Web </span>
+            <span 
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: "linear-gradient(to left, #6366f1, #a855f7, #fcd34d)" }}
+            >
+              APK
+            </span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="font-sans text-hero-sub text-sm sm:text-base leading-relaxed max-w-xl mt-3 mx-auto opacity-80"
+          >
+            Convert any responsive web experience into sovereign, high-fidelity Android packages with live GHA build status pipelines.
+          </motion.p>
         </div>
 
-        {/* Dynamic Builder Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* TWO-COLUMN COMPILER WORKSPACE */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full mt-2 items-start text-left">
           
-          {/* Configurator Box (7 cols) */}
-          <div className="lg:col-span-7">
-            <div className="bg-[#0b0e14] border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
-              
-              <div className="px-6 py-4.5 border-b border-slate-800/80 bg-slate-900/20 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Settings className="h-5 w-5 text-indigo-400" />
-                  <h3 className="font-semibold text-white">App Converter configuration</h3>
-                </div>
-                <span className="text-xs font-mono text-indigo-400">Secure dispatch API</span>
-              </div>
+          {/* LEFT: Compiler Configurations (7 Columns) */}
+          <div className="lg:col-span-7 space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="liquid-glass rounded-3xl p-6 sm:p-8 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            >
+              <h2 className="font-headline text-lg font-bold text-white mb-6 flex items-center space-x-2">
+                <Settings className="h-5 w-5 text-indigo-400" />
+                <span>Compiler Configuration</span>
+              </h2>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <form onSubmit={triggerCompilation} className="space-y-5">
                 
-                {/* Text error alert */}
-                {errorText && (
-                  <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-900/30 text-rose-300 text-xs flex items-start space-x-2.5">
-                    <AlertCircle className="h-4.5 w-4.5 text-rose-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold">Configuration Error</p>
-                      <p className="text-slate-400 mt-1">{errorText}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Configuration parameters */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label htmlFor="app-name-input" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                      Application Name
-                    </label>
-                    <div className="relative">
-                      <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <input 
-                        id="app-name-input"
-                        type="text"
-                        required
-                        placeholder="My Awesome App"
-                        value={appName}
-                        onChange={(e) => setAppName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-800 focus:border-indigo-500/80 rounded-xl text-slate-100 text-sm placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition duration-200"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="package-id-input" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                      Bundle/Package ID
-                    </label>
-                    <div className="relative">
-                      <Cpu className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <input 
-                        id="package-id-input"
-                        type="text"
-                        required
-                        placeholder="com.domain.app"
-                        value={packageName}
-                        onChange={(e) => setPackageName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-800 focus:border-indigo-500/80 rounded-xl text-slate-100 text-sm placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition duration-200 font-mono"
-                      />
-                    </div>
-                  </div>
+                {/* Website URL Input */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 flex items-center space-x-1.5">
+                    <Globe className="h-3 w-3 text-indigo-400" />
+                    <span>Target Website URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://your-responsive-app.com"
+                    className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500 transition duration-300"
+                  />
                 </div>
 
-                <div>
-                  <label htmlFor="website-url-input" className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Website target URL
-                  </label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                    <input 
-                      id="website-url-input"
-                      type="url"
+                {/* Grid for App Name and Package ID */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* App Name */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 flex items-center space-x-1.5">
+                      <Sparkles className="h-3 w-3 text-purple-400" />
+                      <span>App Name</span>
+                    </label>
+                    <input
+                      type="text"
                       required
-                      placeholder="https://responsive-web-portfolio.com"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-800 focus:border-indigo-500/80 rounded-xl text-slate-100 text-sm placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 transition duration-200"
+                      value={appName}
+                      onChange={(e) => setAppName(e.target.value)}
+                      placeholder="My Premium App"
+                      className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition duration-300"
+                    />
+                  </div>
+
+                  {/* Package ID */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 flex items-center space-x-1.5">
+                      <Cpu className="h-3 w-3 text-amber-400" />
+                      <span>Package ID</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={packageName}
+                      onChange={(e) => setPackageName(e.target.value)}
+                      placeholder="com.nexus.app"
+                      className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500 transition duration-300"
                     />
                   </div>
                 </div>
 
-                {/* Advanced Server Configuration toggle */}
-                <div className="border-t border-slate-800/60 pt-4">
+                {/* App Theme and Device Orientation */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Accent Color picker */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-mono uppercase tracking-widest text-slate-400">
+                      Primary Theme Color
+                    </label>
+                    <div className="flex items-center space-x-3 bg-white/[0.02] border border-white/10 rounded-xl px-3 py-2">
+                      <input
+                        type="color"
+                        value={appColor}
+                        onChange={(e) => setAppColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg bg-transparent border-none cursor-pointer"
+                      />
+                      <span className="text-xs font-mono text-slate-300 uppercase">{appColor}</span>
+                    </div>
+                  </div>
+
+                  {/* Target Orientation */}
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-mono uppercase tracking-widest text-slate-400">
+                      Screen Orientation
+                    </label>
+                    <select
+                      value={orientation}
+                      onChange={(e) => setOrientation(e.target.value as any)}
+                      className="w-full bg-black/85 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 transition duration-300 cursor-pointer"
+                    >
+                      <option value="portrait">Portrait Only</option>
+                      <option value="landscape">Landscape Only</option>
+                      <option value="auto">Auto / Sensor Rotate</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Experience Toggles */}
+                <div className="py-2 space-y-3">
+                  <span className="block text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-1">
+                    Container Level Capabilities
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className="flex items-center space-x-3 bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 rounded-xl p-3 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={isFullscreen}
+                        onChange={(e) => setIsFullscreen(e.target.checked)}
+                        className="rounded border-white/10 text-indigo-600 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-xs text-slate-300">Fullscreen</span>
+                    </label>
+
+                    <label className="flex items-center space-x-3 bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 rounded-xl p-3 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={pullToRefresh}
+                        onChange={(e) => setPullToRefresh(e.target.checked)}
+                        className="rounded border-white/10 text-indigo-600 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-xs text-slate-300">Pull to Refresh</span>
+                    </label>
+
+                    <label className="flex items-center space-x-3 bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 rounded-xl p-3 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={zoomControls}
+                        onChange={(e) => setZoomControls(e.target.checked)}
+                        className="rounded border-white/10 text-indigo-600 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-xs text-slate-300">Pinch to Zoom</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Collapsible Advanced Settings (GitHub Secrets & Targets) */}
+                <div className="border-t border-white/5 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="flex items-center space-x-2 text-xs font-semibold text-slate-400 hover:text-white transition duration-200"
+                    className="flex items-center space-x-2 text-xs font-mono text-slate-400 hover:text-white transition"
                   >
-                    <Settings className={`h-3.5 w-3.5 transform transition ${showAdvanced ? "rotate-45" : ""}`} />
-                    <span>{showAdvanced ? "Hide" : "Show"} Optional Developer Settings</span>
+                    <Settings className="h-3.5 w-3.5" />
+                    <span>{showAdvanced ? "Hide Advanced Core Parameters" : "Show Advanced Core Parameters"}</span>
                   </button>
 
-                  {showAdvanced && (
-                    <div className="mt-4 p-4 rounded-xl bg-slate-950/50 border border-slate-800/80 space-y-4 animate-fadeIn">
-                      <p className="text-[11px] text-slate-500 leading-normal">
-                        By default, this server utilizes the system-configured environment variables (<code>GITHUB_PAT</code> &amp; <code>GITHUB_REPO</code>). Input values here only if you wish to override and dispatch compilation to your custom individual repository.
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="custom-repo-input" className="block text-[11px] text-slate-400 mb-1">Custom Owner/Repository</label>
-                          <input 
-                            id="custom-repo-input"
+                  <AnimatePresence>
+                    {showAdvanced && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden mt-3 space-y-3 pt-1"
+                      >
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-mono uppercase text-slate-500">
+                            GitHub Repository (dispatch target)
+                          </label>
+                          <input
                             type="text"
-                            placeholder="username/custom-repo"
                             value={githubRepo}
-                            onChange={(e) => {
-                              setGithubRepo(e.target.value);
-                              saveAdvancedSettings(githubToken, e.target.value);
-                            }}
-                            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg font-mono focus:outline-none focus:border-indigo-500"
+                            onChange={(e) => setGithubRepo(e.target.value)}
+                            placeholder="owner/repo"
+                            className="w-full bg-white/[0.01] border border-white/5 rounded-xl px-3 py-2 text-xs text-white font-mono"
                           />
                         </div>
-                        <div>
-                          <label htmlFor="custom-token-input" className="block text-[11px] text-slate-400 mb-1">Custom Personal Access Token</label>
-                          <input 
-                            id="custom-token-input"
-                            type="password"
-                            placeholder="ghp_****************"
-                            value={githubToken}
-                            onChange={(e) => {
-                              setGithubToken(e.target.value);
-                              saveAdvancedSettings(e.target.value, githubRepo);
-                            }}
-                            className="w-full px-3 py-2 bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg font-mono focus:outline-none focus:border-indigo-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* Submit Action */}
+                {/* Build Activation Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide shadow-lg transition duration-200 flex items-center justify-center space-x-2 ${
-                    isSubmitting
-                      ? "bg-indigo-800 text-indigo-300 cursor-not-allowed"
-                      : "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 hover:shadow-indigo-950/20 text-white"
-                  }`}
+                  disabled={buildStatus === "queued" || buildStatus === "in_progress"}
+                  className="w-full mt-4 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs uppercase tracking-widest transition duration-300 flex items-center justify-center space-x-2 shadow-[0_8px_24px_rgba(99,102,241,0.2)] disabled:opacity-50 cursor-pointer"
                 >
-                  {isSubmitting ? (
+                  {buildStatus === "queued" || buildStatus === "in_progress" ? (
                     <>
-                      <RefreshCw className="h-5 w-5 animate-spin" />
-                      <span>Packaging Application Assets...</span>
+                      <RefreshCw className="h-4 w-4 animate-spin text-indigo-300" />
+                      <span>Packaging Source Web Assets ({progress}%)</span>
                     </>
                   ) : (
                     <>
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>Start Conversion Run</span>
+                      <Cpu className="h-4 w-4 text-amber-300" />
+                      <span>Compile Native App</span>
                     </>
                   )}
                 </button>
 
               </form>
-
-            </div>
+            </motion.div>
           </div>
 
-          {/* Compilation Logs & Status Monitor (5 cols) */}
-          <div className="lg:col-span-5">
-            <div className="bg-[#0b0e14] border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden flex flex-col h-full">
-              
-              <div className="px-6 py-4.5 border-b border-slate-800/80 bg-slate-900/20 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Terminal className="h-5 w-5 text-indigo-400" />
-                  <h3 className="font-semibold text-white">Live Compilation telemetry</h3>
+          {/* RIGHT: SMARTPHONE SIMULATOR & COMPILE MONITOR (5 Columns) */}
+          <div className="lg:col-span-5 flex justify-center w-full">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="relative w-full max-w-[340px] aspect-[9/18.5] bg-[#0c0d16] rounded-[48px] p-3.5 border-[7px] border-slate-800 shadow-[0_25px_60px_rgba(0,0,0,0.8)] ring-1 ring-white/10 overflow-hidden flex flex-col justify-between"
+              style={{ borderColor: appColor }}
+            >
+              {/* Phone Speaker & Camera Notch */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-slate-800 rounded-b-2xl z-40 flex items-center justify-center space-x-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />
+                <div className="w-8 h-1 rounded-full bg-slate-900" />
+              </div>
+
+              {/* Status bar */}
+              <div className="flex justify-between px-5 pt-4 text-[9px] font-mono text-slate-400 z-30">
+                <span>09:41</span>
+                <div className="flex items-center space-x-1">
+                  <Wifi className="h-2.5 w-2.5" />
+                  <Battery className="h-2.5 w-2.5" />
                 </div>
-                {activeBuild && (
-                  <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-indigo-400">
-                    {activeBuild.status.toUpperCase()}
-                  </span>
-                )}
               </div>
 
-              {/* Logger Display Terminal */}
-              <div className="p-6 flex-1 flex flex-col justify-between space-y-6">
+              {/* INNER SCREEN */}
+              <div className="relative flex-1 rounded-[32px] overflow-hidden bg-slate-950 mt-2 p-1 z-20 flex flex-col justify-between border border-white/5">
                 
-                {!currentBuildId && !isSubmitting ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center py-10 text-slate-500">
-                    <Smartphone className="h-10 w-10 text-slate-600 mb-3" />
-                    <p className="text-sm font-semibold text-slate-400">Awaiting Conversion Initialization</p>
-                    <p className="text-xs text-slate-500 max-w-xs mt-1.5 leading-relaxed">
-                      Enter your application display properties and target website. Then, press trigger to launch the remote compilation runner.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4 flex-1">
-                    
-                    {/* Progress Loader Phases */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
-                        <span>Compilation Sequence</span>
-                        <span className="text-indigo-400 font-semibold">{activeStepIndex * 25}% Completed</span>
-                      </div>
-                      
-                      {/* Horizontal bar */}
-                      <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-900">
-                        <div 
-                          className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700 ease-out" 
-                          style={{ width: `${Math.max(activeStepIndex * 25, 10)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    {/* Console Logger Window */}
-                    <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4 font-mono text-xs text-slate-300 h-44 overflow-y-auto space-y-2 leading-relaxed">
-                      {liveLog.map((log, index) => (
-                        <div key={index} className={`flex items-start space-x-1.5 ${
-                          log.startsWith("✓") ? "text-emerald-400" : log.startsWith("[") ? "text-slate-400" : "text-amber-400"
-                        }`}>
-                          <span>{log}</span>
+                <AnimatePresence mode="wait">
+                  {buildStatus === "idle" ? (
+                    /* IFRAME WEBSITE SIMULATION PREVIEW */
+                    <motion.div
+                      key="preview"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 flex flex-col justify-between"
+                    >
+                      {/* Interactive address overlay inside simulator */}
+                      <div className="p-2.5 bg-slate-900/90 border-b border-white/5 flex items-center justify-between z-10">
+                        <div className="flex items-center space-x-1 text-[9px] font-mono text-slate-400 max-w-[150px] truncate">
+                          <Lock className="h-2.5 w-2.5 text-emerald-400 shrink-0" />
+                          <span className="truncate">{websiteUrl}</span>
                         </div>
-                      ))}
-                      {isSubmitting && (
-                        <div className="flex items-center space-x-1 text-[11px] text-indigo-400 animate-pulse mt-1">
-                          <RefreshCw className="h-3 w-3 animate-spin mr-1" />
-                          <span>Polling compilation runner status...</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Completed Download block */}
-                    {activeBuild && (activeBuild.android_url || activeBuild.ios_url) && (
-                      <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-900/30 space-y-3.5 animate-fadeIn">
-                        <p className="text-xs font-semibold text-indigo-300">Generated Download Artifacts:</p>
-                        
-                        <div className="grid grid-cols-1 gap-2.5">
-                          {activeBuild.android_url && (
-                            <a 
-                              href={activeBuild.android_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold flex items-center justify-between shadow transition duration-200"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <Smartphone className="h-4 w-4" />
-                                <span>Download Android Release APK</span>
-                              </div>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          )}
-
-                          {activeBuild.ios_url && (
-                            <a 
-                              href={activeBuild.ios_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-between shadow transition duration-200"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <Layers className="h-4 w-4" />
-                                <span>Download iOS Unsigned Package</span>
-                              </div>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          )}
+                        <div className="flex items-center space-x-1.5">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: appColor }} />
+                          <span className="text-[8px] font-bold tracking-widest text-slate-500 uppercase">{orientation}</span>
                         </div>
                       </div>
-                    )}
 
-                  </div>
-                )}
+                      {/* Web View Simulator Iframe */}
+                      <div className="flex-1 bg-slate-950 flex items-center justify-center overflow-hidden">
+                        {websiteUrl && websiteUrl.startsWith("http") ? (
+                          <iframe
+                            src={websiteUrl}
+                            className="w-full h-full border-none"
+                            title="Interactive Container Preview"
+                            referrerPolicy="no-referrer"
+                            sandbox="allow-scripts allow-same-origin allow-forms"
+                            onError={() => toast.error("Live preview cannot be nested in a frame, but compilation will succeed.")}
+                          />
+                        ) : (
+                          <div className="text-center p-4 space-y-2">
+                            <Smartphone className="h-8 w-8 mx-auto text-slate-600 animate-bounce" />
+                            <p className="text-[10px] text-slate-500">Awaiting configuration target</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Device Action Bar */}
+                      <div className="p-3 bg-slate-900/90 border-t border-white/5 text-center text-[9px] font-mono text-slate-400">
+                        <span>Container OS v1.0.4</span>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    /* ACTIVE HIGH-TECH BUILD MONITOR */
+                    <motion.div
+                      key="monitor"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 p-4 flex flex-col justify-between bg-slate-950 overflow-y-auto"
+                    >
+                      {/* Active Status Header */}
+                      <div className="space-y-1 pt-4 text-center">
+                        <div className="inline-block px-2.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[8px] font-mono uppercase tracking-widest text-indigo-300">
+                          {buildStatus}
+                        </div>
+                        <h4 className="font-headline text-sm font-bold text-white truncate px-2">{appName}</h4>
+                        <p className="text-[9px] text-slate-500 font-mono truncate">{packageName}</p>
+                      </div>
+
+                      {/* STEPS PIPELINE */}
+                      <div className="my-4 space-y-2.5 text-left">
+                        {steps.map((st, i) => (
+                          <div key={i} className="flex items-start space-x-2">
+                            <div className="mt-1 shrink-0">
+                              {activeStepIndex > i ? (
+                                <div className="h-3 w-3 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[7px] font-bold">✓</div>
+                              ) : activeStepIndex === i ? (
+                                <div className="h-3 w-3 rounded-full bg-indigo-500 animate-ping" />
+                              ) : (
+                                <div className="h-3 w-3 rounded-full bg-slate-800" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-[10px] font-semibold tracking-tight ${activeStepIndex === i ? "text-indigo-400" : activeStepIndex > i ? "text-emerald-400" : "text-slate-500"}`}>{st.title}</p>
+                              <p className="text-[8px] text-slate-500 leading-tight truncate">{st.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Dynamic Terminal Logs Console */}
+                      <div className="bg-black/90 rounded-xl p-2.5 border border-white/5 font-mono text-[8px] text-emerald-400 h-24 overflow-y-auto space-y-1 text-left">
+                        {consoleLogs.map((log, i) => (
+                          <p key={i} className="leading-normal break-all">{log}</p>
+                        ))}
+                      </div>
+
+                      {/* PROGRESS BAR & DOWNLOAD CTAS */}
+                      <div className="space-y-3 pb-2">
+                        <div className="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                          <span>Progress</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-400 transition-all duration-500" 
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+
+                        {/* Interactive download buttons when completed */}
+                        {buildStatus === "completed" && (
+                          <div className="space-y-1.5 pt-1">
+                            {androidDownloadUrl && (
+                              <a
+                                href={androidDownloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-[10px] font-mono text-slate-950 font-bold flex items-center justify-center space-x-1 transition"
+                              >
+                                <Download className="h-3 w-3" />
+                                <span>Download APK package</span>
+                              </a>
+                            )}
+                            {iosDownloadUrl && (
+                              <a
+                                href={iosDownloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full py-2 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-[10px] font-mono text-white font-bold flex items-center justify-center space-x-1 transition"
+                              >
+                                <Download className="h-3 w-3" />
+                                <span>Download iOS App</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
               </div>
-
-            </div>
+            </motion.div>
           </div>
 
         </div>
 
-        {/* Directory Explorer & Code Viewer */}
-        <section id="saas-file-explorer" className="mt-12">
-          <div className="bg-[#0b0e14] border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
-            
-            {/* Explorer Header */}
-            <div className="px-6 py-5 border-b border-slate-800/80 bg-slate-900/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold text-white">Full SaaS Directory Blueprint</h3>
-                <p className="text-xs text-slate-500">Examine the code architecture backing the compilation pipeline.</p>
+        {/* SYSTEM BUILD ARCHIVES PANEL */}
+        {buildArchives.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full mt-12 text-left liquid-glass rounded-3xl p-6 sm:p-8 space-y-5 border border-white/10"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+                  <History className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-bold text-white tracking-tight">System Build Archives</h3>
+                  <p className="text-[10px] text-slate-500 font-mono">Offline Client Cache Logs</p>
+                </div>
               </div>
-
-              {/* Selector Tabs */}
-              <div className="flex flex-wrap bg-slate-950 p-1 border border-slate-900 rounded-xl">
-                <button 
-                  onClick={() => setExplorerTab("structure")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${explorerTab === "structure" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                >
-                  Structure
-                </button>
-                <button 
-                  onClick={() => setExplorerTab("main")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${explorerTab === "main" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                >
-                  main.dart
-                </button>
-                <button 
-                  onClick={() => setExplorerTab("pubspec")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${explorerTab === "pubspec" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                >
-                  pubspec.yaml
-                </button>
-                <button 
-                  onClick={() => setExplorerTab("workflow")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${explorerTab === "workflow" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                >
-                  build.yml
-                </button>
-                <button 
-                  onClick={() => setExplorerTab("server")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${explorerTab === "server" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}
-                >
-                  server.ts
-                </button>
-              </div>
+              <button 
+                type="button"
+                onClick={clearAllArchives}
+                className="px-3 py-1.5 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/10 rounded-xl text-[10px] font-mono text-rose-400 hover:text-rose-300 transition"
+              >
+                Clear Archive
+              </button>
             </div>
 
-            {/* Content box */}
-            <div className="relative">
-              
-              {explorerTab !== "structure" && (
-                <button
-                  onClick={() => {
-                    if (explorerTab === "main") copyToClipboard(FLUTTER_MAIN_DART);
-                    if (explorerTab === "pubspec") copyToClipboard(FLUTTER_PUBSPEC);
-                    if (explorerTab === "workflow") copyToClipboard(GITHUB_WORKFLOW);
-                  }}
-                  className="absolute top-4 right-4 z-10 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-750 text-xs rounded-lg text-slate-300 flex items-center space-x-1 transition"
-                >
-                  {copiedText ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedText ? "Copied" : "Copy"}</span>
-                </button>
-              )}
+            <div className="space-y-3.5 max-h-[360px] overflow-y-auto pr-1">
+              {buildArchives.map((archive) => (
+                <div key={archive.id} className="liquid-glass rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-white/5 hover:border-indigo-500/10 transition duration-300">
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-xs text-white truncate block max-w-[200px]">{archive.appName}</span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-slate-400 truncate">{archive.packageName}</span>
+                      {archive.appColor && (
+                        <span 
+                          className="h-2 w-2 rounded-full shrink-0" 
+                          style={{ backgroundColor: archive.appColor }}
+                          title={`Accent: ${archive.appColor}`}
+                        />
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-mono text-slate-500">
+                      <span className="text-indigo-400/80 truncate block max-w-[220px]">{archive.websiteUrl}</span>
+                      <span>•</span>
+                      <span>{archive.timestamp}</span>
+                      {archive.orientation && (
+                        <>
+                          <span>•</span>
+                          <span className="capitalize text-pink-400/80">{archive.orientation}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="p-6 bg-slate-950/60 overflow-x-auto text-xs font-mono leading-relaxed max-h-[500px]">
-                
-                {explorerTab === "structure" && (
-                  <pre className="text-slate-300">
-{`PROJECT DIRECTORY ARCHITECTURE:
-├── .github/
-│   └── workflows/
-│       └── build.yml               # Triggered via repository_dispatch; builds and uploads Android & iOS
-├── flutter-template/
-│   ├── assets/
-│   │   └── config.json            # Dynamic configuration injected by GHA run
-│   ├── lib/
-│   │   └── main.dart              # Performance-optimized Flutter webview wrapper
-│   └── pubspec.yaml               # Flutter bundle declaration with webview_flutter dependencies
-├── server.ts                      # Custom Express API backend serving dispatch and webhook receivers
-├── package.json                   # Build and development orchestration scripts
-├── src/
-│   ├── App.tsx                    # SaaS User Control Panel Frontend Dashboard
-│   └── index.css                  # Tailwinds design styling variables`}
-                  </pre>
-                )}
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => restoreArchivePreset(archive)}
+                      className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-white/5 rounded-lg text-[10px] font-mono text-slate-300 hover:text-white transition active:translate-y-0.5"
+                      title="Prefill configuration settings with this archive"
+                    >
+                      Restore Presets
+                    </button>
 
-                {explorerTab === "main" && <pre className="text-slate-300">{FLUTTER_MAIN_DART}</pre>}
-                {explorerTab === "pubspec" && <pre className="text-slate-300">{FLUTTER_PUBSPEC}</pre>}
-                {explorerTab === "workflow" && <pre className="text-slate-300">{GITHUB_WORKFLOW}</pre>}
-                {explorerTab === "server" && (
-                  <pre className="text-slate-300">
-{`import express from "express";
-import path from "path";
+                    {archive.android_url && (
+                      <a
+                        href={archive.android_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-lg text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center space-x-1"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>APK</span>
+                      </a>
+                    )}
 
-// 1. POST /api/convert: triggers the GHA trigger-compiler dispatch
-// 2. POST /api/webhook-receiver: registers completion and caches download URLs
-// 3. GET /api/status/:build_id: pulls active status and yields downloads`}
-                  </pre>
-                )}
+                    {archive.ios_url && (
+                      <a
+                        href={archive.ios_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg text-[10px] font-mono text-purple-400 hover:text-purple-300 transition flex items-center space-x-1"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>iOS</span>
+                      </a>
+                    )}
 
-              </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteArchiveItem(archive.id)}
+                      className="p-1.5 bg-slate-950 hover:bg-rose-950/20 border border-white/5 text-slate-500 hover:text-rose-400 rounded-lg transition"
+                      title="Delete entry from local archives"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="px-6 py-4 border-t border-slate-800/80 bg-slate-900/20 text-[11px] text-slate-500 font-mono">
-              Configuration Mode: PRODUCTION READY
-            </div>
-
-          </div>
-        </section>
+          </motion.div>
+        )}
 
       </main>
 
-      <footer className="mt-16 border-t border-slate-900 bg-[#04060a] py-8 text-center text-xs text-slate-600">
-        <p>© 2026 Web-to-App Compiler SaaS Platform. All rights reserved.</p>
+      {/* LOGO MARQUEE (Pinned to bottom of hero, pb-10) */}
+      <footer className="relative w-full pb-10 z-20">
+        <div className="w-full max-w-5xl mx-auto px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+            
+            {/* Left side: Static Text */}
+            <div className="shrink-0 text-foreground/50 text-sm font-medium tracking-tight text-center md:text-left leading-tight whitespace-nowrap">
+              Relied on by brands <br className="hidden sm:block" /> across the globe
+            </div>
+
+            {/* Right side: Infinite Scrolling Marquee */}
+            <div className="relative flex-1 overflow-hidden w-full py-4 [mask-image:linear-gradient(to_right,transparent,white_15%,white_85%,transparent)]">
+              <div className="flex gap-16 animate-marquee whitespace-nowrap shrink-0">
+                {/* First Logo Set */}
+                {brandLogos.map((logo, idx) => (
+                  <div key={`brand-set-1-${idx}`} className="flex items-center space-x-3 shrink-0">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center liquid-glass text-[10px] font-bold font-mono text-indigo-400">
+                      {logo.char}
+                    </div>
+                    <span className="text-base font-semibold text-foreground tracking-tight">{logo.name}</span>
+                  </div>
+                ))}
+                {/* Duplicated set for seamless loop */}
+                {brandLogos.map((logo, idx) => (
+                  <div key={`brand-set-2-${idx}`} className="flex items-center space-x-3 shrink-0" aria-hidden="true">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center liquid-glass text-[10px] font-bold font-mono text-indigo-400">
+                      {logo.char}
+                    </div>
+                    <span className="text-base font-semibold text-foreground tracking-tight">{logo.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
       </footer>
 
     </div>

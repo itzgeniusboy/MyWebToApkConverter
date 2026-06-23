@@ -1,6 +1,6 @@
 {
-  "name": "Web to App Converter",
-  "description": "A fully responsive SaaS platform to compile Android (APK) and iOS applications from any website URL using optimized Flutter templates and GitHub Actions runners.",
+  "name": "MyWebToApkConverter",
+  "description": "A premium full-screen dark landing page featuring a custom JS-faded looping background video, fluid glass navigation, responsive high-impact typography, and an infinite scrolling brand marquee.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

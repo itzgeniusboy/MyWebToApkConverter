@@ -1,34 +1,278 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap');
+@import "@fontsource/geist-sans";
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Geist Sans", sans-serif;
+  --font-headline: "General Sans", sans-serif;
+  --color-background: hsl(260 87% 3%);
+  --color-foreground: hsl(40 6% 95%);
+  --color-hero-sub: hsl(40 6% 82%);
 }
 
-/* Base custom styles to complement the dark theme dashboard */
+/* Liquid glass utility class */
+.liquid-glass { 
+  background: rgba(255, 255, 255, 0.01); 
+  background-blend-mode: luminosity; 
+  backdrop-filter: blur(4px); 
+  border: none; 
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1); 
+  position: relative; 
+  overflow: hidden; 
+}
+.liquid-glass::before { 
+  content: ""; 
+  position: absolute; 
+  inset: 0; 
+  border-radius: inherit; 
+  padding: 1.4px; 
+  background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%); 
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); 
+  -webkit-mask-composite: xor; 
+  mask-composite: exclude; 
+  pointer-events: none; 
+}
+
+/* Hero Secondary button style (Liquid-glass, high-contrast, polished) */
+.btn-hero-secondary {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    inset 0 1px 0px rgba(255, 255, 255, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  color: hsl(40 6% 95%);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-hero-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    inset 0 1px 0px rgba(255, 255, 255, 0.2),
+    0 8px 24px rgba(99, 102, 241, 0.15);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.btn-hero-secondary:active {
+  transform: translateY(1px);
+  background: rgba(255, 255, 255, 0.01);
+}
+
 body {
-  background-color: #090b11;
+  background-color: hsl(260 87% 3%);
+  color: hsl(40 6% 95%);
   font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
 pre, code {
   font-family: var(--font-mono);
 }
 
-/* Custom fade-in and slide animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
+/* Subtle Cyberpunk grid pattern background */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Solid 3D Obsidian Slab with Intense Outset Shadow & Inner Bevel Highlight */
+.obsidian-slab {
+  background: linear-gradient(135deg, #0e121d 0%, #070910 100%);
+  box-shadow: 
+    inset 1px 1px 0px rgba(255, 255, 255, 0.1), /* top-left light highlight */
+    inset -1px -1px 0px rgba(0, 0, 0, 0.6),      /* bottom-right shadow bevel */
+    0px 20px 50px rgba(0, 0, 0, 0.8),            /* deep float shadow */
+    0px 4px 10px rgba(99, 102, 241, 0.1);        /* indigo subtle neon bloom */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Deep Hollowed-Out 3D Recesses for Inputs */
+.recessed-input {
+  background: #04060b;
+  box-shadow: 
+    inset 0px 4px 8px rgba(0, 0, 0, 0.9),       /* deep inner shadow */
+    inset 0px 1px 2px rgba(0, 0, 0, 0.6),
+    0px 1px 0px rgba(255, 255, 255, 0.05);       /* thin bottom lip highlight */
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.recessed-input:focus-within {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 
+    inset 0px 2px 5px rgba(0, 0, 0, 0.95),
+    0px 0px 15px rgba(99, 102, 241, 0.25);       /* glow on focus */
+}
+
+/* Thick Beveled 3D Button - Depresses on Active Click */
+.bevel-button-3d {
+  position: relative;
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0px 6px 0px #1e1b4b,                        /* 3D bottom bevel/lip */
+    0px 12px 24px rgba(0, 0, 0, 0.5),           /* float shadow */
+    inset 0px 1px 0px rgba(255, 255, 255, 0.3); /* inner top glare highlight */
+  transform: translateY(0px);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.bevel-button-3d:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  box-shadow: 
+    0px 6px 0px #1e1b4b,
+    0px 15px 30px rgba(99, 102, 241, 0.25),      /* hover neon glow */
+    inset 0px 1px 0px rgba(255, 255, 255, 0.4);
+}
+
+.bevel-button-3d:active {
+  transform: translateY(4px);                  /* physically depress downward */
+  box-shadow: 
+    0px 2px 0px #1e1b4b,                        /* minimized bottom lip */
+    0px 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.2);
+}
+
+/* Green Android/APK download button style */
+.bevel-button-green-3d {
+  position: relative;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0px 6px 0px #064e3b,
+    0px 12px 24px rgba(0, 0, 0, 0.5),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.3);
+  transform: translateY(0px);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.bevel-button-green-3d:hover {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 
+    0px 6px 0px #064e3b,
+    0px 15px 30px rgba(16, 185, 129, 0.25),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.4);
+}
+
+.bevel-button-green-3d:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0px 2px 0px #064e3b,
+    0px 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.2);
+}
+
+/* Purple iOS download button style */
+.bevel-button-purple-3d {
+  position: relative;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0px 6px 0px #4c1d95,
+    0px 12px 24px rgba(0, 0, 0, 0.5),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.3);
+  transform: translateY(0px);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.bevel-button-purple-3d:hover {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 
+    0px 6px 0px #4c1d95,
+    0px 15px 30px rgba(139, 92, 246, 0.25),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.4);
+}
+
+.bevel-button-purple-3d:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0px 2px 0px #4c1d95,
+    0px 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0px 1px 0px rgba(255, 255, 255, 0.2);
+}
+
+/* Tactile Embossed/Neomorphic status boxes */
+.neomorphic-status-box {
+  background: #0a0e1a;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 
+    inset 1px 1px 0px rgba(255, 255, 255, 0.05),
+    0px 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Futuristic 3D Custom Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  50% {
+    transform: translateY(-12px) rotate(1deg);
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@keyframes slow-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.3;
+    filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4));
+  }
+  50% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 35px rgba(168, 85, 247, 0.7));
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-slow-spin {
+  animation: slow-spin 20s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+/* Infinite Scrolling Marquee */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+/* Custom scrollbars for code terminals */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 14, 20, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.3);
 }
 

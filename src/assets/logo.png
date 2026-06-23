@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" width="120" height="32">
+  <defs>
+    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#fcd34d" />
+    </linearGradient>
+  </defs>
+  <!-- Sleek tech glyph -->
+  <g fill="none" stroke="url(#logo-grad)" stroke-width="2.5">
+    <path d="M12 6 l8 10 l-8 10 M18 6 l8 10 l-8 10" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+  <!-- Elegant typography -->
+  <text x="36" y="21" fill="#f5f5f7" font-family="system-ui, sans-serif" font-weight="700" font-size="15" letter-spacing="1.5">NEXUS</text>
+</svg>
